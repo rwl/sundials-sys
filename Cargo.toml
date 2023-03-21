@@ -1,6 +1,6 @@
 [package]
 name = "sundials-sys"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Jason Dark <email@jkdark.com>", "Arthur Carcano <arthur.carcano@gmail.fr>", "Christophe Troestler <christophe.troestler@umons.ac.be>" ]
 edition = "2018"
 links = "sundials"
