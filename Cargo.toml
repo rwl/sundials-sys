@@ -10,7 +10,7 @@ categories = ["external-ffi-bindings", "science"]
 repository = "https://github.com/Chris00/sundials-sys"
 license = "BSD-3-Clause"
 readme = "README.md"
-keywords = ["ode", "solver", "sundials", "differential"]
+keywords = ["ode", "numerics", "ffi", "math", "simulation"]
 exclude = ["**/*.pdf","vendor/examples"]
 
 [build-dependencies]
