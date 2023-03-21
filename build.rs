@@ -1,6 +1,6 @@
 use std::{env,
           path::PathBuf};
-use bindgen::Bindings;
+use bindgen::{Bindings, BindgenError};
 
 // SUNDIALS has a few non-negative constants that need to be parsed as an i32.
 // This is an attempt at doing so generally.
@@ -69,7 +69,8 @@ fn build_vendored_sundials() -> (Option<String>, Option<String>, &'static str) {
     (lib_loc, inc_dir, library_type)
 }
 
-fn generate_bindings(inc_dir: &Option<String>) -> Result<Bindings, ()> {
+fn generate_bindings(inc_dir: &Option<String>)
+                     -> Result<Bindings, BindgenError> {
     macro_rules! define {
         ($a:tt, $b:tt) => {
             format!(
