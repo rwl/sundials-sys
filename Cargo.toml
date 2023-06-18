@@ -5,7 +5,7 @@ authors = ["Jason Dark <email@jkdark.com>", "Arthur Carcano <arthur.carcano@gmai
 edition = "2021"
 links = "sundials"
 
-description = "A -sys crate for the SUNDIALS suite of ODE solvers"
+description = "Bindings to the SUNDIALS suite of Nonlinear and DAE Solvers"
 categories = ["external-ffi-bindings", "science"]
 repository = "https://github.com/Chris00/sundials-sys"
 license = "BSD-3-Clause"
