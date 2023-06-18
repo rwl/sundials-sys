@@ -2,7 +2,7 @@
 name = "sundials-sys"
 version = "0.2.5"
 authors = ["Jason Dark <email@jkdark.com>", "Arthur Carcano <arthur.carcano@gmail.fr>", "Christophe Troestler <christophe.troestler@umons.ac.be>" ]
-edition = "2018"
+edition = "2021"
 links = "sundials"
 
 description = "A -sys crate for the SUNDIALS suite of ODE solvers"
@@ -14,8 +14,8 @@ keywords = ["ode", "numerics", "ffi", "math", "simulation"]
 exclude = ["**/*.pdf","vendor/examples"]
 
 [build-dependencies]
-bindgen = "0.64"
-cmake = "0.1.35"
+bindgen = "0.66"
+cmake = "0.1.50"
 
 [target.'cfg(target_env = "msvc")'.build-dependencies]
 vcpkg = "0.2.15"
@@ -37,4 +37,4 @@ nvecpthreads = []
 
 [package.metadata.docs.rs]
 
-features = ["build_libraries", "arkode", "cvode", "cvodes", "ida", "idas", "kinsol", "nvecopenmp", "nvecpthreads"]
+features = ["static_libraries", "build_libraries", "arkode", "cvode", "cvodes", "ida", "idas", "kinsol", "nvecopenmp", "nvecpthreads"]
