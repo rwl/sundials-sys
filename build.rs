@@ -1,5 +1,7 @@
 use std::{env,
-          path::PathBuf};
+          fs::File,
+          io::{BufReader, Read},
+          path::{PathBuf, Path}};
 use bindgen::{Bindings, BindgenError};
 
 // SUNDIALS has a few non-negative constants that need to be parsed as an i32.
@@ -28,8 +30,8 @@ fn get_env_var(var_name: &str) -> Option<String> {
     })
 }
 
-/// Build the Sundials code vendored with sundials-sys.
-fn build_vendored_sundials() -> (Option<String>, Option<String>, &'static str) {
+/// Build the Sundials code vendor with sundials-sys.
+fn build_vendor_sundials() -> (Option<String>, Option<String>, &'static str) {
     macro_rules! feature {
         ($s:tt) => {
             if cfg!(feature = $s) {
@@ -101,6 +103,37 @@ fn generate_bindings(inc_dir: &Option<String>)
         .generate()
 }
 
+fn sundials_major_version(bindings: impl AsRef<Path>) -> Option<u32> {
+    let b = File::open(bindings).expect("Couldn't read file bindings.rs!");
+    let mut b = BufReader::new(b).bytes();
+    'version:
+    while b.find(|c| c.as_ref().is_ok_and(|&c| c == b'S')).is_some() {
+        for c0 in "UNDIALS_VERSION_MAJOR".bytes() {
+            match b.next() {
+                Some(Ok(c)) => {
+                    if c != c0 {
+                        continue 'version
+                    }
+                }
+                Some(Err(_)) | None => return None
+            }
+        }
+        // : u32 = 6
+        if b.find(|c| c.as_ref().is_ok_and(|&c| c == b'=')).is_some() {
+            let b = b.skip_while(|c| c.as_ref().is_ok_and(|c| {
+                !c.is_ascii_digit() }));
+            let v: Vec<_> =
+                b.map_while(|c| c.ok().filter(|c| c.is_ascii_digit()))
+                .collect();
+            match String::from_utf8(v) {
+                Ok(v) => return v.parse().ok(),
+                Err(_) => return None
+            }
+        }
+        return None
+    }
+    None
+}
 
 fn main() {
     // First, we build the SUNDIALS library, with requested modules with CMake
@@ -109,7 +142,7 @@ fn main() {
     let mut inc_dir;
     let mut library_type = "dylib";
     if cfg!(any(feature = "build_libraries", target_family = "wasm")) {
-        (lib_loc, inc_dir, library_type) = build_vendored_sundials();
+        (lib_loc, inc_dir, library_type) = build_vendor_sundials();
     } else {
         lib_loc = get_env_var("SUNDIALS_LIBRARY_DIR");
         inc_dir = get_env_var("SUNDIALS_INCLUDE_DIR");
@@ -121,23 +154,34 @@ fn main() {
                 .emit_includes(true)
                 .find_package("sundials");
             if vcpkg.is_err() {
-                (lib_loc, inc_dir, library_type) = build_vendored_sundials();
+                (lib_loc, inc_dir, library_type) = build_vendor_sundials();
             }
         }
     }
 
     // Second, we use bindgen to generate the Rust types
 
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let bindings_rs = PathBuf::from(env::var("OUT_DIR").unwrap())
+        .join("bindings.rs");
+    let mut build_vendor = true;
     if let Ok(bindings) = generate_bindings(&inc_dir) {
-        bindings.write_to_file(out_path.join("bindings.rs"))
-            .expect("Couldn't write bindings!");
-    } else {
-        (lib_loc, inc_dir, library_type) = build_vendored_sundials();
+        bindings.write_to_file(&bindings_rs)
+            .expect("Couldn't write file bindings.rs!");
+        if let Some(v) = sundials_major_version(&bindings_rs) {
+            if v >= 6 {
+                build_vendor = false
+            } else {
+                println!("cargo:warning=System sundials version = \
+                          {} < 6, will use the vendor version", v);
+            }
+        }
+    }
+    if build_vendor {
+        (lib_loc, inc_dir, library_type) = build_vendor_sundials();
         generate_bindings(&inc_dir)
-            .expect("Unable to generate bindings")
-            .write_to_file(out_path.join("bindings.rs"))
-            .expect("Couldn't write bindings!");
+            .expect("Unable to generate bindings of the vendor sundials!")
+            .write_to_file(&bindings_rs)
+            .expect("Couldn't write file bindings.rs!");
     }
 
     // Third, we let Cargo know about the library files
