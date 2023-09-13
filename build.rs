@@ -118,10 +118,10 @@ fn sundials_major_version(bindings: impl AsRef<Path>) -> Option<u32> {
                 Some(Err(_)) | None => return None
             }
         }
-        // : u32 = 6
+        // Match " : u32 = 6"
         if b.find(|c| c.as_ref().is_ok_and(|&c| c == b'=')).is_some() {
-            let b = b.skip_while(|c| c.as_ref().is_ok_and(|c| {
-                !c.is_ascii_digit() }));
+            let is_not_digit = |c: &u8| !c.is_ascii_digit();
+            let b = b.skip_while(|c| c.as_ref().is_ok_and(is_not_digit));
             let v: Vec<_> =
                 b.map_while(|c| c.ok().filter(|c| c.is_ascii_digit()))
                 .collect();
