@@ -19,17 +19,6 @@ impl bindgen::callbacks::ParseCallbacks for ParseSignedConstants {
     }
 }
 
-// Get environment variable from string
-fn get_env_var(var_name: &str) -> Option<String> {
-    env::vars().find_map(|(key, value)| {
-        if key == var_name {
-            Some(value)
-        } else {
-            None
-        }
-    })
-}
-
 /// Build the Sundials code vendor with sundials-sys.
 fn build_vendor_sundials() -> (Option<String>, Option<String>, &'static str) {
     macro_rules! feature {
@@ -144,8 +133,8 @@ fn main() {
     if cfg!(any(feature = "build_libraries", target_family = "wasm")) {
         (lib_loc, inc_dir, library_type) = build_vendor_sundials();
     } else {
-        lib_loc = get_env_var("SUNDIALS_LIBRARY_DIR");
-        inc_dir = get_env_var("SUNDIALS_INCLUDE_DIR");
+        lib_loc = env::var("SUNDIALS_LIBRARY_DIR").ok();
+        inc_dir = env::var("SUNDIALS_INCLUDE_DIR").ok();
     }
 
     if lib_loc.is_none() && inc_dir.is_none() {
