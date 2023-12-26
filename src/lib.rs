@@ -10,7 +10,7 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use core::ffi::c_void;
+    use core:: {ffi::c_void, ptr};
 
     #[test]
     // This just tests if the most basic of all programs works. More tests to come soon.
@@ -26,16 +26,20 @@ mod tests {
         }
 
         unsafe {
-            let y = N_VNew_Serial(1);
+            let mut ctx = ptr::null_mut();
+            if SUNContext_Create(ptr::null_mut(), &mut ctx) < 0 {
+                panic!("Could not initialize Context.");
+            }
+            let y = N_VNew_Serial(1, ctx);
             *N_VGetArrayPointer(y) = 1.0;
 
-            let mut cvode_mem = CVodeCreate(CV_ADAMS);
+            let mut cvode_mem = CVodeCreate(CV_ADAMS, ctx);
 
             CVodeInit(cvode_mem, Some(rhs), 0.0, y);
             CVodeSStolerances(cvode_mem, 1e-6, 1e-8);
 
-            let matrix = SUNDenseMatrix(1, 1);
-            let solver = SUNDenseLinearSolver(y, matrix);
+            let matrix = SUNDenseMatrix(1, 1, ctx);
+            let solver = SUNLinSol_Dense(y, matrix, ctx);
 
             CVodeSetLinearSolver(cvode_mem, solver, matrix);
 
