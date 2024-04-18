@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, stable-vendor, beta, nightly, linux32, macos, aarch64-ios, win64, win64-vendor, windows-latest]
+        build: [stable, stable-vendor, beta, nightly, macos, macos-aarch64, win64, win64-vendor]
         include:
           - build: stable
             os: ubuntu-latest
@@ -26,22 +26,15 @@ jobs:
             os: ubuntu-latest
             rust: nightly
             target: x86_64-unknown-linux-gnu
-          - build: linux32
-            os: ubuntu-latest
-            rust: stable
-            target: i686-unknown-linux-gnu
           - build: macos
             os: macos-latest
             rust: stable
             target: x86_64-apple-darwin
-          - build: aarch64-ios
-            os: macos-latest
+          - build: macos-aarch64
+            # Must install app https://github.com/apps/flyci-prod
+            os: flyci-macos-large-latest-m1
             rust: stable
-            target: aarch64-apple-ios
-          - build: windows-aarch64
-            os: windows-latest
-            rust: stable
-            target: aarch64-pc-windows-msvc
+            target: aarch64-apple-darwin
           - build: win64
             os: windows-latest
             rust: stable
@@ -50,10 +43,12 @@ jobs:
             os: windows-latest
             rust: stable
             target: x86_64-pc-windows-msvc
-          - build: windows-latest
-            os: windows-latest
-            rust: stable-x86_64
-            target: x86_64-pc-windows-msvc
+          # - build: windows-aarch64
+          #   # No Windows arm64 workers at the moment.
+          #   # https://github.com/actions/runner-images/issues/768
+          #   os: windows-latest
+          #   rust: stable
+          #   target: aarch64-pc-windows-msvc
     steps:
     - uses: actions/checkout@master
     - run: git submodule init
@@ -69,8 +64,9 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get -y install libsundials-dev
     - name: Install Rust (rustup)
-      run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
-      shell: bash
-    - run: rustup target add ${{ matrix.target }}
+      run: |
+        rustup update --no-self-update
+        rustup default ${{ matrix.rust }}-${{ matrix.target }}
     - run: cargo build
+    # - run: cargo build --all-features
     - run: cargo test
