@@ -68,5 +68,4 @@ jobs:
         rustup update --no-self-update
         rustup default ${{ matrix.rust }}-${{ matrix.target }}
     - run: cargo build
-    # - run: cargo build --all-features
-    - run: cargo test
+    - run: cargo test --features cvodes,idas
