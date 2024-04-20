@@ -7,6 +7,17 @@
 )]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
+// The communicator type changed from version 6 to 7.
+
+/// Create a new communicator type when MPI is not enabled.
+#[cfg(all(sundials_version_major = "6", not(feature="nvecopenmp")))]
+pub fn comm_no_mpi() -> *mut std::ffi::c_void { std::ptr::null_mut() }
+
+/// Create a new communicator type when MPI is not enabled.
+#[cfg(all(sundials_version_major = "7", not(feature="nvecopenmp")))]
+pub fn comm_no_mpi() -> SUNComm { 0 }
+
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -16,7 +27,7 @@ mod tests {
     // This just tests if the most basic of all programs works. More tests to come soon.
     fn simple_ode() {
         unsafe extern "C" fn rhs(
-            _t: realtype,
+            _t: f64,
             y: N_Vector,
             dy: N_Vector,
             _user_data: *mut c_void,
@@ -27,7 +38,7 @@ mod tests {
 
         unsafe {
             let mut ctx = ptr::null_mut();
-            if SUNContext_Create(ptr::null_mut(), &mut ctx) < 0 {
+            if SUNContext_Create(comm_no_mpi(), &mut ctx) < 0 {
                 panic!("Could not initialize Context.");
             }
             let y = N_VNew_Serial(1, ctx);

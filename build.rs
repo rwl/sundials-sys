@@ -139,7 +139,7 @@ fn generate_bindings(inc_dir: &Option<String>)
         .generate()
 }
 
-fn sundials_major_version(bindings: impl AsRef<Path>) -> Option<u32> {
+fn get_sundials_version_major(bindings: impl AsRef<Path>) -> Option<u32> {
     let b = File::open(bindings).expect("Couldn't read file bindings.rs!");
     let mut b = BufReader::new(b).bytes();
     'version:
@@ -200,12 +200,14 @@ fn main() {
     let bindings_rs = PathBuf::from(env::var("OUT_DIR").unwrap())
         .join("bindings.rs");
     let mut build_vendor = true;
+    let mut sundials_version_major = 0;
     if let Ok(bindings) = generate_bindings(&inc_dir) {
         bindings.write_to_file(&bindings_rs)
             .expect("Couldn't write file bindings.rs!");
-        if let Some(v) = sundials_major_version(&bindings_rs) {
+        if let Some(v) = get_sundials_version_major(&bindings_rs) {
             if v >= 6 {
-                build_vendor = false
+                build_vendor = false;
+                sundials_version_major = v;
             } else {
                 println!("cargo:warning=System sundials version = \
                           {} < 6, will use the vendor version", v);
@@ -214,18 +216,25 @@ fn main() {
     }
     if build_vendor {
         (lib_loc, inc_dir, library_type) = build_vendor_sundials();
-        generate_bindings(&inc_dir)
-            .expect("Unable to generate bindings of the vendor sundials!")
-            .write_to_file(&bindings_rs)
-            .expect("Couldn't write file bindings.rs!");
+        if let Ok(bindings) = generate_bindings(&inc_dir) {
+            bindings
+                .write_to_file(&bindings_rs)
+                .expect("Couldn't write file bindings.rs!");
+            sundials_version_major = get_sundials_version_major(&bindings_rs)
+                .expect("Cannot determine vendor sundials version!");
+        } else {
+            panic!("Unable to generate bindings of the vendor sundials!");
+        }
     }
+    println!("cargo:rustc-cfg=sundials_version_major=\"{}\"",
+        sundials_version_major);
 
     // Third, we let Cargo know about the library files
 
     if let Some(loc) = lib_loc {
         println!("cargo:rustc-link-search=native={}", loc)
     }
-    for lib_name in &[
+    let mut lib_names = vec![
         "nvecserial",
         "sunlinsolband",
         "sunlinsoldense",
@@ -239,23 +248,22 @@ fn main() {
         "sunmatrixsparse",
         "sunnonlinsolfixedpoint",
         "sunnonlinsolnewton",
-    ] {
+    ];
+    if sundials_version_major >= 7 {
+        lib_names.push("core");
+    }
+    macro_rules! link { ($($s:tt),*) => {
+        $(if cfg!(feature = $s) { lib_names.push($s) })*
+    }}
+    link! ("arkode", "cvode", "cvodes", "ida", "idas", "kinsol",
+        "nvecopenmp", "nvecpthreads");
+
+    for lib_name in &lib_names {
         println!(
             "cargo:rustc-link-lib={}=sundials_{}",
             library_type, lib_name
         );
     }
-
-    macro_rules! link {
-        ($($s:tt),*) => {
-            $(if cfg!(feature = $s) {
-                println!("cargo:rustc-link-lib={}=sundials_{}", library_type, $s);
-            })*
-        }
-    }
-
-    link! {"arkode", "cvode", "cvodes", "ida", "idas", "kinsol",
-           "nvecopenmp", "nvecpthreads"}
 
     // And that's all.
 }
