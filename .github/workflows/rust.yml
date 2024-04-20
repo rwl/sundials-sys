@@ -18,6 +18,7 @@ jobs:
             os: ubuntu-latest
             rust: stable
             target: x86_64-unknown-linux-gnu
+            sundials: v7.0.0 v6.7.0 v6.6.2 v6.6.1 v6.6.0 v6.5.1 v6.5.0 v6.4.1 v6.4.0 v6.3.0 v6.2.0 v6.1.1 v6.1.0 v6.0.0
           - build: beta
             os: ubuntu-latest
             rust: beta
@@ -69,3 +70,18 @@ jobs:
         rustup default ${{ matrix.rust }}-${{ matrix.target }}
     - run: cargo build
     - run: cargo test --features cvodes,idas
+    - name: Test various versions of Sundials
+      if: startsWith(matrix.os, 'ubuntu') && contains(matrix.build, 'vendor')
+      run: |
+        cd vendor
+        git fetch origin
+        git reset --hard --quiet origin/main
+        cd ..
+        for v in ${{ matrix.sundials }}; do
+          echo "▪▪▪ $v ▪▪▪"
+          cd vendor
+          git checkout $v
+          cd ..
+          cargo clean
+          cargo test --features build_libraries,cvodes,idas
+        done
