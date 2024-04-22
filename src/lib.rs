@@ -9,9 +9,13 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 // The communicator type changed from version 6 to 7.
 
+/// Communicator connection type.
+#[cfg(all(sundials_version_major = "6", not(feature="nvecopenmp")))]
+pub type SUNComm = *mut std::ffi::c_void;
+
 /// Create a new communicator type when MPI is not enabled.
 #[cfg(all(sundials_version_major = "6", not(feature="nvecopenmp")))]
-pub fn comm_no_mpi() -> *mut std::ffi::c_void { std::ptr::null_mut() }
+pub fn comm_no_mpi() -> SUNComm { std::ptr::null_mut() }
 
 /// Create a new communicator type when MPI is not enabled.
 #[cfg(all(sundials_version_major = "7", not(feature="nvecopenmp")))]
