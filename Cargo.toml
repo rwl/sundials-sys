@@ -15,8 +15,8 @@ repository = "https://github.com/Chris00/sundials-sys"
 license = "BSD-3-Clause"
 readme = "README.md"
 keywords = ["ode", "numerics", "ffi", "math", "simulation"]
-exclude = ["**/*.pdf", "vendor/benchmarks", "vendor/doc",
-  "vendor/examples", "vendor/test"]
+exclude = ["**/*.pdf", "vendor/benchmarks", "vendor/scripts", "vendor/doc",
+  "vendor/docker", "vendor/examples", "vendor/test"]
 
 [build-dependencies]
 bindgen = "0.68"
