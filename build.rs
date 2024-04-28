@@ -65,8 +65,43 @@ impl IgnoreMacros {
     }
 }
 
+struct Library {
+    /// Location if the include files.
+    inc: Option<String>,
+    /// Location of the library.
+    lib: Option<String>,
+}
+
+#[cfg(not(feature = "klu"))]
+fn klu_inc_lib() -> Library { Library { inc: None, lib: None } }
+
+#[cfg(feature = "klu")]
+fn klu_inc_lib() -> Library {
+    // `sunlinsol_klu.h` has `#include <klu.h>` while it is in the
+    // subdirectory `suitesparse` of the standard dirs.  Thus take the
+    // paths from pkg-config if available.
+    let mut klu_inc = None;
+    let mut klu_lib = None;
+    if let Ok(klu) = pkg_config::Config::new().probe("KLU") {
+        if ! klu.include_paths.is_empty() {
+            klu_inc = Some(klu.include_paths[0].display().to_string());
+        }
+        if ! klu.link_paths.is_empty() {
+            klu_lib = Some(klu.link_paths[0].display().to_string());
+        }
+    }
+    // Override if some locations were specified explicitly.
+    if let Ok(inc) = env::var("KLU_INCLUDE_DIR") {
+        klu_inc = Some(inc);
+    }
+    if let Ok(lib) = env::var("KLU_LIBRARY_DIR") {
+        klu_lib = Some(lib);
+    }
+    Library { inc: klu_inc,  lib: klu_lib }
+}
+
 /// Build the Sundials code vendor with sundials-sys.
-fn build_vendor_sundials() -> (Option<String>, Option<String>, &'static str) {
+fn build_vendor_sundials(klu: &Library) -> (Library, &'static str) {
     macro_rules! feature {
         ($s:tt) => {
             if cfg!(feature = $s) {
@@ -84,7 +119,8 @@ fn build_vendor_sundials() -> (Option<String>, Option<String>, &'static str) {
         _ => unreachable!(),
     };
 
-    let dst = cmake::Config::new("vendor")
+    let mut config = cmake::Config::new("vendor");
+    config
         .define("CMAKE_INSTALL_LIBDIR", "lib")
         .define("BUILD_STATIC_LIBS", static_libraries)
         .define("BUILD_SHARED_LIBS", shared_libraries)
@@ -97,17 +133,25 @@ fn build_vendor_sundials() -> (Option<String>, Option<String>, &'static str) {
         .define("BUILD_IDA", feature!("ida"))
         .define("BUILD_IDAS", feature!("idas"))
         .define("BUILD_KINSOL", feature!("kinsol"))
+		.define("ENABLE_KLU", feature!("klu"))
         .define("OPENMP_ENABLE", feature!("nvecopenmp"))
-        .define("PTHREAD_ENABLE", feature!("nvecpthreads"))
-        .build();
+        .define("PTHREAD_ENABLE", feature!("nvecpthreads"));
+    if let Some(inc) = &klu.inc {
+        config.define("KLU_INCLUDE_DIR", inc);
+    }
+    if let Some(lib) = &klu.lib {
+        config.define("KLU_LIBRARY_DIR", lib);
+    }
+
+    let dst = config.build();
     let dst_disp = dst.display();
     let lib_loc = Some(format!("{}/lib", dst_disp));
     let inc_dir = Some(format!("{}/include", dst_disp));
-    (lib_loc, inc_dir, library_type)
+    (Library { inc: inc_dir, lib: lib_loc }, library_type)
 }
 
-fn generate_bindings(inc_dir: &Option<String>)
-                     -> Result<Bindings, BindgenError> {
+fn generate_bindings(inc_dirs: &[Option<String>]) -> Result<Bindings, BindgenError>
+{
     macro_rules! define {
         ($a:tt, $b:tt) => {
             format!(
@@ -118,12 +162,13 @@ fn generate_bindings(inc_dir: &Option<String>)
         };
     }
 
-    bindgen::Builder::default()
-        .header("wrapper.h")
-        .clang_arg(match inc_dir {
-            Some(dir) => format!("-I{}", dir),
-            None => "".to_owned(),
-        })
+    let mut builder = bindgen::Builder::default().header("wrapper.h");
+    for dir in inc_dirs {
+        if let Some(dir) = dir {
+            builder = builder.clang_arg(format!("-I{}", dir))
+        }
+    }
+    builder
         .clang_args(&[
             define!("arkode", ARKODE),
             define!("cvode", CVODE),
@@ -131,6 +176,7 @@ fn generate_bindings(inc_dir: &Option<String>)
             define!("ida", IDA),
             define!("idas", IDAS),
             define!("kinsol", KINSOL),
+            define!("klu", KLU),
             define!("nvecopenmp", OPENMP),
             define!("nvecpthreads", PTHREADS),
         ])
@@ -174,23 +220,23 @@ fn get_sundials_version_major(bindings: impl AsRef<Path>) -> Option<u32> {
 fn main() {
     // First, we build the SUNDIALS library, with requested modules with CMake
 
-    let mut lib_loc;
-    let mut inc_dir;
+    let klu = klu_inc_lib();
+    let mut sundials = Library { inc: None, lib: None };
     let mut library_type = "dylib";
     if cfg!(any(feature = "build_libraries", target_family = "wasm")) {
-        (lib_loc, inc_dir, library_type) = build_vendor_sundials();
+        (sundials, library_type) = build_vendor_sundials(&klu);
     } else {
-        lib_loc = env::var("SUNDIALS_LIBRARY_DIR").ok();
-        inc_dir = env::var("SUNDIALS_INCLUDE_DIR").ok();
+        sundials.inc = env::var("SUNDIALS_INCLUDE_DIR").ok();
+        sundials.lib = env::var("SUNDIALS_LIBRARY_DIR").ok();
     }
 
-    if lib_loc.is_none() && inc_dir.is_none() {
+    if sundials.lib.is_none() && sundials.inc.is_none() {
         #[cfg(target_family = "windows")] {
             let vcpkg = vcpkg::Config::new()
                 .emit_includes(true)
                 .find_package("sundials");
             if vcpkg.is_err() {
-                (lib_loc, inc_dir, library_type) = build_vendor_sundials();
+                (sundials, library_type) = build_vendor_sundials(&klu);
             }
         }
     }
@@ -201,7 +247,7 @@ fn main() {
         .join("bindings.rs");
     let mut build_vendor = true;
     let mut sundials_version_major = 0;
-    if let Ok(bindings) = generate_bindings(&inc_dir) {
+    if let Ok(bindings) = generate_bindings(&[sundials.inc, klu.inc.clone()]) {
         bindings.write_to_file(&bindings_rs)
             .expect("Couldn't write file bindings.rs!");
         if let Some(v) = get_sundials_version_major(&bindings_rs) {
@@ -215,8 +261,8 @@ fn main() {
         }
     }
     if build_vendor {
-        (lib_loc, inc_dir, library_type) = build_vendor_sundials();
-        if let Ok(bindings) = generate_bindings(&inc_dir) {
+        (sundials, library_type) = build_vendor_sundials(&klu);
+        if let Ok(bindings) = generate_bindings(&[sundials.inc, klu.inc]) {
             bindings
                 .write_to_file(&bindings_rs)
                 .expect("Couldn't write file bindings.rs!");
@@ -231,8 +277,8 @@ fn main() {
 
     // Third, we let Cargo know about the library files
 
-    if let Some(loc) = lib_loc {
-        println!("cargo:rustc-link-search=native={}", loc)
+    if let Some(dir) = sundials.lib {
+        println!("cargo:rustc-link-search=native={}", dir)
     }
     let mut lib_names = vec![
         "nvecserial",

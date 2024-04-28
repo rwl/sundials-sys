@@ -36,3 +36,6 @@
 #include <kinsol/kinsol.h>
 #endif
 
+#if USE_KLU
+#include <sunlinsol/sunlinsol_klu.h>
+#endif

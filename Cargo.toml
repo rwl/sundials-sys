@@ -21,6 +21,7 @@ exclude = ["**/*.pdf", "vendor/benchmarks", "vendor/scripts", "vendor/doc",
 [build-dependencies]
 bindgen = "0.68"
 cmake = "0.1.50"
+pkg-config = { version = "0.3.30", optional = true }
 
 [target.'cfg(target_env = "msvc")'.build-dependencies]
 vcpkg = "0.2.15"
@@ -35,6 +36,8 @@ cvodes = []
 ida = []
 idas = []
 kinsol = []
+# Feature `klu` requires suitesparse (see README).
+klu = ["pkg-config"]
 nvecopenmp = []
 nvecpthreads = []
 
@@ -42,4 +45,4 @@ nvecpthreads = []
 
 [package.metadata.docs.rs]
 
-features = ["static_libraries", "build_libraries", "arkode", "cvode", "cvodes", "ida", "idas", "kinsol", "nvecopenmp", "nvecpthreads"]
+features = ["static_libraries", "build_libraries", "arkode", "cvode", "cvodes", "ida", "idas", "kinsol", "klu", "nvecopenmp", "nvecpthreads"]
