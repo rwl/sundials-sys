@@ -65,6 +65,7 @@ impl IgnoreMacros {
     }
 }
 
+#[derive(Debug)]
 struct Library {
     /// Location if the include files.
     inc: Option<String>,
@@ -96,6 +97,20 @@ fn klu_inc_lib() -> Library {
     }
     if let Ok(lib) = env::var("KLU_LIBRARY_DIR") {
         klu_lib = Some(lib);
+    }
+    // FIXME (hack): The compilation is likely to fail without a
+    // correct SuiteSparse directory.
+    let std_inc = "/usr/include/suitesparse".to_string();
+    if klu_inc.is_none() && Path::new(&std_inc).exists() {
+        klu_inc = Some(std_inc);
+    }
+    let std_lib = "/usr/lib/x86_64-linux-gnu".to_string();
+    if klu_lib.is_none() && Path::new(&std_lib).exists() {
+        klu_lib = Some(std_lib);
+    }
+    if klu_inc.is_none() {
+        println!("cargo:warning=No include directory found for KLU, \
+            you may want to set the KLU_INCLUDE_DIR environment variable.")
     }
     Library { inc: klu_inc,  lib: klu_lib }
 }

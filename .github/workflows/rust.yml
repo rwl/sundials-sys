@@ -70,6 +70,11 @@ jobs:
         rustup default ${{ matrix.rust }}-${{ matrix.target }}
     - run: cargo build
     - run: cargo test --features cvodes,idas
+    - name: Test KLU
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt-get install libsuitesparse-dev pkg-config
+        cargo test --features klu
     - name: Test various versions of Sundials
       if: startsWith(matrix.os, 'ubuntu') && contains(matrix.build, 'vendor')
       run: |
