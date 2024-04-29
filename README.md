@@ -80,9 +80,10 @@ The license and copyright information for the SUNDIALS suite can be viewed [here
 
 ## Versions
 
-* 0.4.0
+* 0.5.0
   - Add KLU support (feature gated).
   - Be compatible with Sundials version 7.0.0
+* 0.4.0 — Minor improvements
 * 0.3.0 — Ensure sundials version ≥ 6, use `vcpkg` on Windows.
 * 0.2.0 — Make compilation of sundials optional (allowing to link against the system library). Add static library option.
 * 0.1.1 — removal of (S) libraries from default features, addition of pthreads support if requested
