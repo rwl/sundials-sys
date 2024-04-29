@@ -2,17 +2,35 @@
 
 # sundials-sys
 
-A barebones `-sys` crate around the [SUNDIALS](https://computation.llnl.gov/projects/sundials) suite of ODE solvers. The system must have CMake (`cmake` dependency) and clang (`bindgen` dependency) already installed for compilation to succeed.
+A barebones `-sys` crate around the
+[SUNDIALS](https://computation.llnl.gov/projects/sundials) suite of
+ODE solvers.
 
 ## System Dependencies
 
-This library will try to detect whether a system SUNDIALS library is
+The system must have CMake (`cmake` dependency) and clang (`bindgen`
+dependency) already installed for compilation to succeed.
+
+This crate will try to detect whether a system SUNDIALS library is
 present (with header files) and otherwise compile a vendored version
 of it.  If your SUNDIALS library is installed at an unusual location,
 you may declare the environment variables `SUNDIALS_LIBRARY_DIR` and
 `SUNDIALS_INCLUDE_DIR` to communicate this to the build script.  You
 may force the use of the vendored version by enabling the feature
 `build_libraries`.
+
+Enabling the `klu` feature requires the SuiteSparse library to be
+installed (with header files) on your system.  There is no fallback to
+a vendor version of SuiteSparse because this library is very large.
+If KLU is installed at a non-standard location and this location is
+not known to `pkg-config`, you can set `KLU_INCLUDE_DIR` and
+`KLU_LIBRARY_DIR` to respectively specify the include path for `klu.h`
+and the lib path.  For example:
+
+```
+KLU_INCLUDE_DIR=/usr/include/suitesparse
+KLU_LIBRARY_DIR=/usr/lib/x86_64-linux-gnu
+```
 
 ### Unix
 
@@ -21,6 +39,9 @@ Use your package manager to install `cmake` and `clang`.
 System SUNDIALS libraries are available: install `libsundials-dev` for
 Debian based systems, `sundials-devel` for Redhat and Suse, and
 `sundials` for Arch, MacOS, and the BSD distributions.
+
+On Debian based systems, the SuiteSparse development files may be
+installed with `apt install libsuitesparse-dev`.
 
 ### Windows
 
@@ -31,7 +52,7 @@ otherwise `cmake` will not find the C++ compiler and you will have an
 error such as “Generator Visual Studio 16 2019 could not find any
 instance of Visual Studio.”
 
-To install a system SUNDIALS, we recommend you install [vcpkg][] and
+To install a system SUNDIALS, we recommend you use [vcpkg][] and
 then issue (from the vcpkg directory):
 ```
 vcpkg install sundials --triplet=x64-windows
@@ -39,6 +60,10 @@ vcpkg install sundials --triplet=x64-windows
 
 Alternatively, you may use [Chocolatey][] to install [cmake][] and
 [llvm][] (which provides clang).
+
+If you need to enable KLU, you need to add this [vcpkg registry which
+provides sundials with KLU
+enabled](https://github.com/pybamm-team/sundials-vcpkg-registry).
 
 [visual studio]: https://visualstudio.microsoft.com/
 [VS]: https://learn.microsoft.com/en-us/windows/dev-environment/rust/setup
@@ -48,11 +73,16 @@ Alternatively, you may use [Chocolatey][] to install [cmake][] and
 [cmake]: https://community.chocolatey.org/packages?q=cmake
 [llvm]: https://community.chocolatey.org/packages?q=llvm
 
+
 ## License
 
 The license and copyright information for the SUNDIALS suite can be viewed [here](https://computation.llnl.gov/projects/sundials/license). At the time of writing, it is a BSD 3-Clause license. The code specific to this crate is also made available under the BSD 3-Clause license.
 
 ## Versions
+
+* 0.4.0
+  - Add KLU support (feature gated).
+  - Be compatible with Sundials version 7.0.0
 * 0.3.0 — Ensure sundials version ≥ 6, use `vcpkg` on Windows.
 * 0.2.0 — Make compilation of sundials optional (allowing to link against the system library). Add static library option.
 * 0.1.1 — removal of (S) libraries from default features, addition of pthreads support if requested
