@@ -295,6 +295,11 @@ fn main() {
     if let Some(dir) = sundials.lib {
         println!("cargo:rustc-link-search=native={}", dir)
     }
+
+    if let Some(dir) = &klu.lib {
+        println!("cargo:rustc-link-search=native={}", dir);
+    }
+
     let mut lib_names = vec![
         "nvecserial",
         "sunlinsolband",
@@ -328,6 +333,7 @@ fn main() {
 
     if let Some(dir) = &klu.inc {
         println!("cargo:rustc-link-lib={}=sundials_sunlinsolklu", library_type);
+        println!("cargo:rustc-link-lib={}=klu", library_type);
         println!("cargo:klu-include={}", dir)
     }
 
