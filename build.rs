@@ -332,8 +332,12 @@ fn main() {
     }
 
     if let Some(dir) = &klu.inc {
-        println!("cargo:rustc-link-lib={}=sundials_sunlinsolklu", library_type);
-        println!("cargo:rustc-link-lib={}=klu", library_type);
+        for lib_name in &["sundials_sunlinsolklu", "klu", "suitesparseconfig", "colamd", "klu", "btf", "amd"] {
+            println!(
+                "cargo:rustc-link-lib={}={}",
+                library_type, lib_name
+            );
+        }
         println!("cargo:klu-include={}", dir)
     }
 
