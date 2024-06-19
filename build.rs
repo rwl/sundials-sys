@@ -327,7 +327,7 @@ fn main() {
     }
 
     if let Some(dir) = &klu.inc {
-        println!("cargo:rustc-link-include={}", dir)
+        println!("cargo:klu-include={}", dir)
     }
 
     // And that's all.
