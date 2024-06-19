@@ -277,7 +277,7 @@ fn main() {
     }
     if build_vendor {
         (sundials, library_type) = build_vendor_sundials(&klu);
-        if let Ok(bindings) = generate_bindings(&[sundials.inc, klu.inc]) {
+        if let Ok(bindings) = generate_bindings(&[sundials.inc, klu.inc.clone()]) {
             bindings
                 .write_to_file(&bindings_rs)
                 .expect("Couldn't write file bindings.rs!");
@@ -324,6 +324,10 @@ fn main() {
             "cargo:rustc-link-lib={}=sundials_{}",
             library_type, lib_name
         );
+    }
+
+    if let Some(dir) = &klu.inc {
+        println!("cargo:rustc-link-include={}", dir)
     }
 
     // And that's all.
