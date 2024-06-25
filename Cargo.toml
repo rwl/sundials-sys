@@ -37,11 +37,12 @@ ida = []
 idas = []
 kinsol = []
 # Feature `klu` requires suitesparse (see README).
-klu = ["pkg-config"]
+klu = ["suitesparse-sys"]
 nvecopenmp = []
 nvecpthreads = []
 
 [dependencies]
+suitesparse-sys = { git = "https://github.com/martinjrobins/suitesparse-sys", optional = true }
 
 [package.metadata.docs.rs]
 
