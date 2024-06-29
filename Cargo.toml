@@ -37,7 +37,7 @@ ida = []
 idas = []
 kinsol = []
 # Feature `klu` requires suitesparse (see README).
-klu = ["suitesparse-sys"]
+klu = ["suitesparse_sys"]
 nvecopenmp = []
 nvecpthreads = []
 
