@@ -42,7 +42,7 @@ nvecopenmp = []
 nvecpthreads = []
 
 [dependencies]
-suitesparse-sys = { git = "https://github.com/martinjrobins/suitesparse-sys", optional = true }
+suitesparse_sys = { git = "https://github.com/martinjrobins/suitesparse-sys", optional = true }
 
 [package.metadata.docs.rs]
 
