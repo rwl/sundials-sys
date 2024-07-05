@@ -193,7 +193,7 @@ fn get_sundials_version_major(bindings: impl AsRef<Path>) -> Option<u32> {
 fn main() {
     // get klu dirs
     let klu_inc = env::var("DEP_SUITESPARSE_SUITESPARSE_INCLUDE").ok();
-    let klu_lib= env::var("DEP_SUITESPARSE_SUITESPARSE_LIB").ok();
+    let klu_lib = env::var("DEP_SUITESPARSE_SUITESPARSE_LIB").ok();
 
     // First, we build the SUNDIALS library, with requested modules with CMake
     let klu = Library { inc: klu_inc, lib: klu_lib };
@@ -255,10 +255,6 @@ fn main() {
 
     if let Some(dir) = sundials.lib {
         println!("cargo:rustc-link-search=native={}", dir)
-    }
-
-    if let Some(dir) = &klu.lib {
-        println!("cargo:rustc-link-search=native={}", dir);
     }
 
     let mut lib_names = vec![
