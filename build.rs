@@ -191,18 +191,11 @@ fn get_sundials_version_major(bindings: impl AsRef<Path>) -> Option<u32> {
 }
 
 fn main() {
-    // First, we build the SUNDIALS library, with requested modules with CMake
+    // get klu dirs
+    let klu_inc = env::var("DEP_SUITESPARSE_SUITESPARSE_INCLUDE").ok();
+    let klu_lib= env::var("DEP_SUITESPARSE_SUITESPARSE_LIB").ok();
 
-    let klu_inc = if let Ok(root) = env::var("DEP_SUITESPARSE_ROOT") {
-        Some(format!("{}/include/suitesparse", root))
-    } else {
-        None
-    };
-    let klu_lib = if let Ok(root) = env::var("DEP_SUITESPARSE_ROOT") {
-        Some(format!("{}/lib", root))
-    } else {
-        None
-    };
+    // First, we build the SUNDIALS library, with requested modules with CMake
     let klu = Library { inc: klu_inc, lib: klu_lib };
     let mut sundials = Library { inc: None, lib: None };
     let mut library_type = "dylib";
@@ -286,6 +279,9 @@ fn main() {
     if sundials_version_major >= 7 {
         lib_names.push("core");
     }
+    if cfg!(feature = "klu") {
+        lib_names.push("sunlinsolklu");
+    }
     macro_rules! link { ($($s:tt),*) => {
         $(if cfg!(feature = $s) { lib_names.push($s) })*
     }}
@@ -298,16 +294,5 @@ fn main() {
             library_type, lib_name
         );
     }
-
-    if let Some(dir) = &klu.inc {
-        for lib_name in &["sundials_sunlinsolklu", "klu", "suitesparseconfig", "colamd", "klu", "btf", "amd"] {
-            println!(
-                "cargo:rustc-link-lib={}={}",
-                library_type, lib_name
-            );
-        }
-        println!("cargo:klu-include={}", dir)
-    }
-
     // And that's all.
 }
