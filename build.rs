@@ -248,6 +248,8 @@ fn main() {
             panic!("Unable to generate bindings of the vendor sundials!");
         }
     }
+    println!("cargo::rustc-check-cfg=cfg(sundials_version_major, \
+        values(\"6\", \"7\"))");
     println!("cargo:rustc-cfg=sundials_version_major=\"{}\"",
         sundials_version_major);
 
