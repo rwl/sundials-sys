@@ -73,48 +73,6 @@ struct Library {
     lib: Option<String>,
 }
 
-#[cfg(not(feature = "klu"))]
-fn klu_inc_lib() -> Library { Library { inc: None, lib: None } }
-
-#[cfg(feature = "klu")]
-fn klu_inc_lib() -> Library {
-    // `sunlinsol_klu.h` has `#include <klu.h>` while it is in the
-    // subdirectory `suitesparse` of the standard dirs.  Thus take the
-    // paths from pkg-config if available.
-    let mut klu_inc = None;
-    let mut klu_lib = None;
-    if let Ok(klu) = pkg_config::Config::new().probe("KLU") {
-        if ! klu.include_paths.is_empty() {
-            klu_inc = Some(klu.include_paths[0].display().to_string());
-        }
-        if ! klu.link_paths.is_empty() {
-            klu_lib = Some(klu.link_paths[0].display().to_string());
-        }
-    }
-    // Override if some locations were specified explicitly.
-    if let Ok(inc) = env::var("KLU_INCLUDE_DIR") {
-        klu_inc = Some(inc);
-    }
-    if let Ok(lib) = env::var("KLU_LIBRARY_DIR") {
-        klu_lib = Some(lib);
-    }
-    // FIXME (hack): The compilation is likely to fail without a
-    // correct SuiteSparse directory.
-    let std_inc = "/usr/include/suitesparse".to_string();
-    if klu_inc.is_none() && Path::new(&std_inc).exists() {
-        klu_inc = Some(std_inc);
-    }
-    let std_lib = "/usr/lib/x86_64-linux-gnu".to_string();
-    if klu_lib.is_none() && Path::new(&std_lib).exists() {
-        klu_lib = Some(std_lib);
-    }
-    if klu_inc.is_none() {
-        println!("cargo:warning=No include directory found for KLU, \
-            you may want to set the KLU_INCLUDE_DIR environment variable.")
-    }
-    Library { inc: klu_inc,  lib: klu_lib }
-}
-
 /// Build the Sundials code vendor with sundials-sys.
 fn build_vendor_sundials(klu: &Library) -> (Library, &'static str) {
     macro_rules! feature {
@@ -233,9 +191,12 @@ fn get_sundials_version_major(bindings: impl AsRef<Path>) -> Option<u32> {
 }
 
 fn main() {
-    // First, we build the SUNDIALS library, with requested modules with CMake
+    // get klu dirs
+    let klu_inc = env::var("DEP_SUITESPARSE_SUITESPARSE_INCLUDE").ok();
+    let klu_lib = env::var("DEP_SUITESPARSE_SUITESPARSE_LIB").ok();
 
-    let klu = klu_inc_lib();
+    // First, we build the SUNDIALS library, with requested modules with CMake
+    let klu = Library { inc: klu_inc, lib: klu_lib };
     let mut sundials = Library { inc: None, lib: None };
     let mut library_type = "dylib";
     if cfg!(any(feature = "build_libraries", target_family = "wasm")) {
@@ -277,7 +238,7 @@ fn main() {
     }
     if build_vendor {
         (sundials, library_type) = build_vendor_sundials(&klu);
-        if let Ok(bindings) = generate_bindings(&[sundials.inc, klu.inc]) {
+        if let Ok(bindings) = generate_bindings(&[sundials.inc, klu.inc.clone()]) {
             bindings
                 .write_to_file(&bindings_rs)
                 .expect("Couldn't write file bindings.rs!");
@@ -295,6 +256,7 @@ fn main() {
     if let Some(dir) = sundials.lib {
         println!("cargo:rustc-link-search=native={}", dir)
     }
+
     let mut lib_names = vec![
         "nvecserial",
         "sunlinsolband",
@@ -313,6 +275,9 @@ fn main() {
     if sundials_version_major >= 7 {
         lib_names.push("core");
     }
+    if cfg!(feature = "klu") {
+        lib_names.push("sunlinsolklu");
+    }
     macro_rules! link { ($($s:tt),*) => {
         $(if cfg!(feature = $s) { lib_names.push($s) })*
     }}
@@ -325,6 +290,5 @@ fn main() {
             library_type, lib_name
         );
     }
-
     // And that's all.
 }
