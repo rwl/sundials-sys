@@ -94,7 +94,8 @@ fn build_vendor_sundials(klu: &Library) -> (Library, &'static str) {
 
     let mut config = cmake::Config::new("vendor");
     config
-        .define("CMAKE_INSTALL_LIBDIR", "lib")
+        .define("CMAKE_INSTALL_BINDIR", "lib") // v7.1.0
+        .define("CMAKE_INSTALL_LIBDIR", "lib") // ≤ v7.0.0
         .define("BUILD_STATIC_LIBS", static_libraries)
         .define("BUILD_SHARED_LIBS", shared_libraries)
         .define("BUILD_TESTING", "OFF")
