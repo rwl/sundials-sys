@@ -80,6 +80,9 @@ The license and copyright information for the SUNDIALS suite can be viewed [here
 
 ## Versions
 
+* 0.5.1
+  - Use the `suitesparse_sys` crate.
+  - Update the vendor version to v7.1.1.
 * 0.5.0
   - Add KLU support (feature gated).
   - Be compatible with Sundials version 7.0.0
