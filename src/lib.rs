@@ -21,6 +21,10 @@ pub fn comm_no_mpi() -> SUNComm { std::ptr::null_mut() }
 #[cfg(all(sundials_version_major = "7", not(feature="nvecopenmp")))]
 pub fn comm_no_mpi() -> SUNComm { 0 }
 
+/// Backward compatibility type.
+#[cfg(sundials_version_major = "7")]
+pub type realtype = sunrealtype; // namespaced, so no prefix needed.
+
 
 #[cfg(test)]
 mod tests {
