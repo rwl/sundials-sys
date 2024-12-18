@@ -260,7 +260,11 @@ fn main() {
         println!("cargo:rustc-link-search=native={}", dir)
     }
 
-    let mut lib_names = vec![
+    let mut lib_names = vec![];
+    if sundials_version_major >= 7 {
+        lib_names.push("core");
+    }
+    lib_names.append(&mut vec![
         "nvecserial",
         "sunlinsolband",
         "sunlinsoldense",
@@ -274,10 +278,7 @@ fn main() {
         "sunmatrixsparse",
         "sunnonlinsolfixedpoint",
         "sunnonlinsolnewton",
-    ];
-    if sundials_version_major >= 7 {
-        lib_names.push("core");
-    }
+    ]);
     if cfg!(feature = "klu") {
         lib_names.push("sunlinsolklu");
     }
