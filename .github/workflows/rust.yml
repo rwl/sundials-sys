@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [ stable, stable-vendor, beta, nightly, macos, win64, win64-vendor, win-static, ubuntu-static ]
+        build: [ stable, stable-vendor, beta, nightly, macos-x86_64, macos-aarch64, win64, win64-vendor, win-static, ubuntu-static ]
         include:
           - build: stable
             os: ubuntu-latest
@@ -27,10 +27,14 @@ jobs:
             os: ubuntu-latest
             rust: nightly
             target: x86_64-unknown-linux-gnu
-          - build: macos
-            os: macos-latest
+          - build: macos-x86_64
+            os: macos-12
             rust: stable
             target: x86_64-apple-darwin
+          - build: macos-aarch64
+            os: macos-latest
+            rust: stable
+            target: aarch64-apple-darwin
           - build: win64
             os: windows-latest
             rust: stable
