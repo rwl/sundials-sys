@@ -70,6 +70,9 @@ jobs:
       run: |
         sudo apt-get install libsuitesparse-dev pkg-config
         cargo test --features klu
+    - name: Test vendored build on Windows
+      if: startsWith(matrix.os, 'windows') && contains(matrix.build, 'vendor')
+      run: cargo test --features "build_libraries,cvodes,idas"
     - name: Test various versions of Sundials
       if: startsWith(matrix.os, 'ubuntu') && contains(matrix.build, 'vendor')
       run: |
