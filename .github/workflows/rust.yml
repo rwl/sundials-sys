@@ -1,5 +1,5 @@
 name: Cargo Build & Test
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
   test:
@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, stable-vendor, beta, nightly, macos, win64, win64-vendor, win-static, ubuntu-static]
+        build: [ stable, stable-vendor, beta, nightly, macos, win64, win64-vendor, win-static, ubuntu-static ]
         include:
           - build: stable
             os: ubuntu-latest
@@ -54,48 +54,53 @@ jobs:
           #   rust: stable
           #   target: aarch64-pc-windows-msvc
     steps:
-    - uses: actions/checkout@master
-    - run: git submodule init
-    - run: git submodule update
-    - name: Set up vcpkg on Windows
-      if: startsWith(matrix.os, 'windows') && ! contains(matrix.build, 'vendor')
-      run: |
-        git clone https://github.com/microsoft/vcpkg
-        & .\vcpkg\bootstrap-vcpkg.bat
-        & .\vcpkg\vcpkg install sundials --triplet=x64-windows
-    - name: Install Ubuntu packages
-      if: startsWith(matrix.os, 'ubuntu') && ! contains(matrix.build, 'vendor')
-      run: |
-        sudo apt-get update && sudo apt-get -y install libsundials-dev
-    - name: Install Rust (rustup)
-      run: |
-        rustup update --no-self-update
-        rustup default ${{ matrix.rust }}-${{ matrix.target }}
-    - run: cargo build
-    - run: cargo test --features cvodes,idas
-    - name: Test KLU
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        sudo apt-get install libsuitesparse-dev pkg-config
-        cargo test --features klu
-    - name: Test static libraries
-      if: contains(matrix.build, 'static')
-      run: cargo test --features "static_libraries,cvodes,idas"
-    - name: Test vendored build on Windows
-      if: startsWith(matrix.os, 'windows') && contains(matrix.build, 'vendor')
-      run: cargo test --features "build_libraries,cvodes,idas"
-    - name: Test various versions of Sundials
-      if: startsWith(matrix.os, 'ubuntu') && contains(matrix.build, 'vendor')
-      run: |
-        cd vendor
-        git fetch origin
-        git reset --hard --quiet origin/main
-        cd ..
-        for v in ${{ matrix.sundials }}; do
-          echo "▪▪▪ $v ▪▪▪"
+      - uses: actions/checkout@master
+      - run: git submodule init
+      - run: git submodule update
+      - name: Set up vcpkg on Windows
+        if: startsWith(matrix.os, 'windows') && ! contains(matrix.build, 'vendor') && matrix.build != 'win-static'
+        run: |
+          git clone https://github.com/microsoft/vcpkg
+          & .\vcpkg\bootstrap-vcpkg.bat
+          & .\vcpkg\vcpkg install sundials --triplet=x64-windows
+      - name: Install Ubuntu packages
+        if: startsWith(matrix.os, 'ubuntu') && ! contains(matrix.build, 'vendor')
+        run: |
+          sudo apt-get update && sudo apt-get -y install libsundials-dev
+      - name: Install Rust (rustup)
+        run: |
+          rustup update --no-self-update
+          rustup default ${{ matrix.rust }}-${{ matrix.target }}
+      - run: cargo build
+        if: matrix.build != 'win-static' && matrix.build != 'ubuntu-static'
+      - run: cargo test --features cvodes,idas
+        if: matrix.build != 'win-static' && matrix.build != 'ubuntu-static'
+      - name: Test KLU
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get install libsuitesparse-dev pkg-config
+          cargo test --features klu
+      - name: Test static libraries on Ubuntu
+        if: matrix.build == 'ubuntu-static'
+        run: cargo test --features "static_libraries,cvodes,idas"
+      - name: Test static libraries on Windows
+        if: matrix.build == 'win-static'
+        run: cargo test --features "static_libraries,build_libraries,cvodes,idas"
+      - name: Test vendored build on Windows
+        if: matrix.build == 'win64-vendor'
+        run: cargo test --features "build_libraries,cvodes,idas"
+      - name: Test various versions of Sundials
+        if: matrix.build == 'stable-vendor'
+        run: |
           cd vendor
-          git checkout $v
+          git fetch origin
+          git reset --hard --quiet origin/main
           cd ..
-          cargo clean
-          cargo test --features build_libraries,cvodes,idas
-        done
+          for v in ${{ matrix.sundials }}; do
+            echo "▪▪▪ $v ▪▪▪"
+            cd vendor
+            git checkout $v
+            cd ..
+            cargo clean
+            cargo test --features build_libraries,cvodes,idas
+          done
