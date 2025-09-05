@@ -90,6 +90,10 @@ jobs:
       - name: Test static libraries on Windows
         if: matrix.build == 'win-static'
         run: cargo test --features "static_libraries,build_libraries,cvodes,idas"
+      - name: List build directory
+        if: matrix.build == 'win-static' && failure()
+        run: |
+          ls -R target/debug/build/sundials-sys-*/out
       - name: Test vendored build on Windows
         if: matrix.build == 'win64-vendor'
         run: cargo test --features "build_libraries,cvodes,idas"
