@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, stable-vendor, beta, nightly, macos, win64, win64-vendor]
+        build: [stable, stable-vendor, beta, nightly, macos, win64, win64-vendor, win-static, ubuntu-static]
         include:
           - build: stable
             os: ubuntu-latest
@@ -39,6 +39,14 @@ jobs:
             os: windows-latest
             rust: stable
             target: x86_64-pc-windows-msvc
+          - build: win-static
+            os: windows-latest
+            rust: stable
+            target: x86_64-pc-windows-msvc
+          - build: ubuntu-static
+            os: ubuntu-latest
+            rust: stable
+            target: x86_64-unknown-linux-gnu
           # - build: windows-aarch64
           #   # No Windows arm64 workers at the moment.
           #   # https://github.com/actions/runner-images/issues/768
@@ -70,6 +78,9 @@ jobs:
       run: |
         sudo apt-get install libsuitesparse-dev pkg-config
         cargo test --features klu
+    - name: Test static libraries
+      if: contains(matrix.build, 'static')
+      run: cargo test --features "static_libraries,cvodes,idas"
     - name: Test vendored build on Windows
       if: startsWith(matrix.os, 'windows') && contains(matrix.build, 'vendor')
       run: cargo test --features "build_libraries,cvodes,idas"
