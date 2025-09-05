@@ -119,7 +119,11 @@ fn build_vendor_sundials(klu: &Library) -> (Library, &'static str) {
 
     let dst = config.build();
     let dst_disp = dst.display();
-    let lib_loc = Some(format!("{}/lib", dst_disp));
+    let lib_loc = if cfg!(feature = "static_libraries") {
+        Some(format!("{}/build/bin/Debug", dst_disp))
+    } else {
+        Some(format!("{}/lib", dst_disp))
+    };
     let inc_dir = Some(format!("{}/include", dst_disp));
     (Library { inc: inc_dir, lib: lib_loc }, library_type)
 }
@@ -289,10 +293,17 @@ fn main() {
         "nvecopenmp", "nvecpthreads");
 
     for lib_name in &lib_names {
-        println!(
-            "cargo:rustc-link-lib={}=sundials_{}",
-            library_type, lib_name
-        );
+        if library_type == "static" {
+            println!(
+                "cargo:rustc-link-lib={}=sundials_{}_static",
+                library_type, lib_name
+            );
+        } else {
+            println!(
+                "cargo:rustc-link-lib={}=sundials_{}",
+                library_type, lib_name
+            );
+        }
     }
     // And that's all.
 }
